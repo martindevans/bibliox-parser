@@ -1,0 +1,12 @@
+[package]
+name = "bibliox-parser"
+version = "0.1.0"
+authors = ["Martin Evans <martindevans@gmail.com>"]
+description = "An SQL parser based on the SQLite grammar"
+build = "build.rs"
+
+[build-dependencies]
+lalrpop = "0.11.0"
+
+[dependencies]
+lalrpop-util = "0.11.0"

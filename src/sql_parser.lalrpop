@@ -1,0 +1,39 @@
+use std::str::FromStr;
+
+use sql_syntax_tree;
+use sql_syntax_tree::{
+    Statement,
+    StatementBody,
+    TableName,
+    ColumnDefinition
+};
+
+grammar;
+
+// Core parts
+TableName: TableName = {
+    <schema:r"[a-zA-Z]+"> "." <name:r"[a-zA-Z]+"> => TableName { schema_name: Some(schema.to_string()), name: name.to_string() },
+    <name:r"[a-zA-Z]+"> => TableName { schema_name: None, name: name.to_string() },
+};
+
+ColumnDefinition: ColumnDefinition = {
+    <name:r"[a-zA-Z]+"> => ColumnDefinition { name: name.to_string() }
+    //todo: more bits of column definition! (See notes in ColumnDefinition struct)
+};
+
+// Root of parsing!
+// https://www.sqlite.org/syntax/sql-stmt.html
+pub Statement: Statement = {
+    <b:StatementBody> => Statement::Plain(b),
+    "EXPLAIN" <b:StatementBody> => Statement::Explain(b),
+    "EXPLAIN QUERY PLAN" <b:StatementBody> => Statement::ExplainQueryPlan(b),
+};
+
+StatementBody: StatementBody = {
+    <a:AlterTableStatementBody> => a
+};
+
+AlterTableStatementBody: StatementBody = {
+    "ALTER TABLE" <t1:TableName> "RENAME TO" <t2:TableName> => StatementBody::AlterTableRenameTo(t1, t2),
+    "ALTER TABLE" <t:TableName> "ADD COLUMN" <c:ColumnDefinition> => StatementBody::AlterTableAddColumn(t, c),
+};
