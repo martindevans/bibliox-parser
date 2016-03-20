@@ -1,39 +1,72 @@
 use std::str::FromStr;
 
-use sql_syntax_tree;
-use sql_syntax_tree::{
+use ast;
+use ast::{
     Statement,
     StatementBody,
     TableName,
-    ColumnDefinition
+    ColumnDefinition,
+    Type,
+    ColumnConstraint
 };
 
 grammar;
 
-// Core parts
-TableName: TableName = {
-    <schema:r"[a-zA-Z]+"> "." <name:r"[a-zA-Z]+"> => TableName { schema_name: Some(schema.to_string()), name: name.to_string() },
-    <name:r"[a-zA-Z]+"> => TableName { schema_name: None, name: name.to_string() },
+//Basics
+SignedInteger: i32 = {
+    r"-?[0-9]+" => i32::from_str(<>).unwrap()
 };
 
-ColumnDefinition: ColumnDefinition = {
-    <name:r"[a-zA-Z]+"> => ColumnDefinition { name: name.to_string() }
-    //todo: more bits of column definition! (See notes in ColumnDefinition struct)
+// Core parts
+pub TableName: TableName<'input> = {
+    <schema:(<r"[a-zA-Z]+"> ".")?> <name:r"[a-zA-Z]+"> => TableName { schema_name: schema, name: name }
+};
+
+pub ColumnName: &'input str = {
+    <name:r"[a-zA-Z]+"> => name
+};
+
+pub ColumnConstraintBody => {
+    "PRIMARY KEY"
+    //"NOT NULL"
+    //"UNIQUE"
+    //"CHECK"
+    //"DEFAULT"
+    //"COLLATE"
+    //foreign key clause
+};
+
+pub ColumnConstraint: ColumnConstraint<'input> = {
+    <name:("CONSTRAINT" <r"[a-zA-Z]+">)?> ColumnConstraintBody => ColumnConstraint { name: name }
+};
+
+pub ColumnDefinition: ColumnDefinition<'input> = {
+    <name:ColumnName> <t:Type?> <c:ColumnConstraint*> => ColumnDefinition { name: name, type_def: t, constraints: c }
+};
+
+pub TypeName: &'input str = {
+    <name:r"[a-zA-Z]+"> => name
+};
+
+pub Type: Type<'input> = {
+    <name:TypeName> => Type { name: name, num1: None, num2: None },
+    <name:TypeName> "(" <n1:SignedInteger> ")" => Type { name: name, num1: Some(n1), num2: None },
+    <name:TypeName> "(" <n1:SignedInteger> "," <n2:SignedInteger> ")" => Type { name: name, num1: Some(n1), num2: Some(n2) },
 };
 
 // Root of parsing!
 // https://www.sqlite.org/syntax/sql-stmt.html
-pub Statement: Statement = {
+pub Statement: Statement<'input> = {
     <b:StatementBody> => Statement::Plain(b),
     "EXPLAIN" <b:StatementBody> => Statement::Explain(b),
     "EXPLAIN QUERY PLAN" <b:StatementBody> => Statement::ExplainQueryPlan(b),
 };
 
-StatementBody: StatementBody = {
+pub StatementBody: StatementBody<'input> = {
     <a:AlterTableStatementBody> => a
 };
 
-AlterTableStatementBody: StatementBody = {
+pub AlterTableStatementBody: StatementBody<'input> = {
     "ALTER TABLE" <t1:TableName> "RENAME TO" <t2:TableName> => StatementBody::AlterTableRenameTo(t1, t2),
     "ALTER TABLE" <t:TableName> "ADD COLUMN" <c:ColumnDefinition> => StatementBody::AlterTableAddColumn(t, c),
 };
