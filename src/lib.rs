@@ -16,7 +16,8 @@ mod tests {
         PrimaryKeyConstraint,
         ColumnConstraintType,
         ColumnConstraint,
-        ConflictClause
+        ConflictClause,
+        CollateFunction
     };
 
     //Helpers
@@ -193,13 +194,17 @@ mod tests {
                     },
                     ColumnDefinition {
                         name: "column",
-                        type_def: None,
+                        type_def: Some(Type {
+                            name: "INT",
+                            num1: Some(1),
+                            num2: Some(2)
+                        }),
                         constraints: vec![
                             ColumnConstraint {
                                 name: None,
                                 constraint: ColumnConstraintType::PrimaryKey(PrimaryKeyConstraint {
-                                    ascending: true,
-                                    conflict: ConflictClause::Abort,
+                                    ascending: Some(true),
+                                    conflict: Some(ConflictClause::Abort),
                                     auto_increment: true
                                 })
                             }
@@ -208,5 +213,111 @@ mod tests {
                 )
             )
         );
+    }
+
+    #[test]
+    fn parse_column_constraint_primary_key() {
+        parse_to_ast("PRIMARY KEY", sql_parser::parse_ColumnConstraint, {
+            ColumnConstraint {
+                name: None,
+                constraint: ColumnConstraintType::PrimaryKey(PrimaryKeyConstraint {
+                    ascending: None,
+                    conflict: None,
+                    auto_increment: false
+                })
+            }
+        });
+    }
+
+    #[test]
+    fn parse_column_constraint_primary_key_with_sort_order() {
+        parse_to_ast("PRIMARY KEY DESC", sql_parser::parse_ColumnConstraint, {
+            ColumnConstraint {
+                name: None,
+                constraint: ColumnConstraintType::PrimaryKey(PrimaryKeyConstraint {
+                    ascending: Some(false),
+                    conflict: None,
+                    auto_increment: false
+                })
+            }
+        });
+    }
+
+    #[test]
+    fn parse_column_constraint_primary_key_with_conflict() {
+        parse_to_ast("PRIMARY KEY ON CONFLICT ROLLBACK", sql_parser::parse_ColumnConstraint, {
+            ColumnConstraint {
+                name: None,
+                constraint: ColumnConstraintType::PrimaryKey(PrimaryKeyConstraint {
+                    ascending: None,
+                    conflict: Some(ConflictClause::Rollback),
+                    auto_increment: false
+                })
+            }
+        });
+    }
+
+    #[test]
+    fn parse_column_constraint_primary_key_with_autoincrement() {
+        parse_to_ast("PRIMARY KEY AUTOINCREMENT", sql_parser::parse_ColumnConstraint, {
+            ColumnConstraint {
+                name: None,
+                constraint: ColumnConstraintType::PrimaryKey(PrimaryKeyConstraint {
+                    ascending: None,
+                    conflict: None,
+                    auto_increment: true
+                })
+            }
+        });
+    }
+
+    #[test]
+    fn parse_column_constraint_not_null() {
+        parse_to_ast("NOT NULL", sql_parser::parse_ColumnConstraint, {
+            ColumnConstraint {
+                name: None,
+                constraint: ColumnConstraintType::NotNull(None)
+            }
+        });
+    }
+
+    #[test]
+    fn parse_column_constraint_not_null_with_conflict() {
+        parse_to_ast("NOT NULL ON CONFLICT FAIL", sql_parser::parse_ColumnConstraint, {
+            ColumnConstraint {
+                name: None,
+                constraint: ColumnConstraintType::NotNull(Some(ConflictClause::Fail))
+            }
+        });
+    }
+
+    #[test]
+    fn parse_column_constraint_unique() {
+        parse_to_ast("UNIQUE", sql_parser::parse_ColumnConstraint, {
+            ColumnConstraint {
+                name: None,
+                constraint: ColumnConstraintType::Unique(None)
+            }
+        });
+    }
+
+    #[test]
+    fn parse_column_constraint_unique_with_conflict() {
+        parse_to_ast("UNIQUE ON CONFLICT REPLACE", sql_parser::parse_ColumnConstraint, {
+            ColumnConstraint {
+                name: None,
+                constraint: ColumnConstraintType::Unique(Some(ConflictClause::Replace))
+            }
+        });
+    }
+
+    #[test]
+    fn parse_column_constraint_collate() {
+        parse_to_ast("COLLATE RTRIM", sql_parser::parse_ColumnConstraint, {
+            ColumnConstraint {
+                name: None,
+                constraint: ColumnConstraintType::Collate(CollateFunction::RightTrim)
+            }
+        });
     }
 }

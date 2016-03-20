@@ -14,16 +14,16 @@ pub struct ColumnConstraint<'a> {
 #[derive(PartialEq, Eq, Debug)]
 pub struct PrimaryKeyConstraint {
     pub ascending: Option<bool>,
-    pub conflict: ConflictClause,
-    pub auto_increment: Option<bool>
+    pub conflict: Option<ConflictClause>,
+    pub auto_increment: bool
 }
 
 //https://www.sqlite.org/syntax/column-constraint.html
 #[derive(PartialEq, Eq, Debug)]
 pub enum ColumnConstraintType {
     PrimaryKey(PrimaryKeyConstraint),
-    NotNull(ConflictClause),
-    Unique(ConflictClause),
+    NotNull(Option<ConflictClause>),
+    Unique(Option<ConflictClause>),
     //Check,
     //Default,
     Collate(CollateFunction),

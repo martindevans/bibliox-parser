@@ -7,7 +7,11 @@ use ast::{
     TableName,
     ColumnDefinition,
     Type,
-    ColumnConstraint
+    ColumnConstraint,
+    ColumnConstraintType,
+    ConflictClause,
+    PrimaryKeyConstraint,
+    CollateFunction
 };
 
 grammar;
@@ -26,18 +30,41 @@ pub ColumnName: &'input str = {
     <name:r"[a-zA-Z]+"> => name
 };
 
-pub ColumnConstraintBody => {
-    "PRIMARY KEY"
-    //"NOT NULL"
-    //"UNIQUE"
-    //"CHECK"
-    //"DEFAULT"
-    //"COLLATE"
-    //foreign key clause
+pub SortOrder: bool = {
+    "ASC" => true,
+    "DESC" => false,
+};
+
+pub AutoIncrement: () = {
+    "AUTOINCREMENT" => (),
+};
+
+pub ConflictClause: ConflictClause = {
+    "ON CONFLICT ROLLBACK" => ConflictClause::Rollback,
+    "ON CONFLICT ABORT" => ConflictClause::Abort,
+    "ON CONFLICT FAIL" => ConflictClause::Fail,
+    "ON CONFLICT IGNORE" => ConflictClause::Ignore,
+    "ON CONFLICT REPLACE" => ConflictClause::Replace,
+};
+
+pub CollateFunction: CollateFunction = {
+    "BINARY" => CollateFunction::Binary,
+    "NOCASE" => CollateFunction::NoCase,
+    "RTRIM" => CollateFunction::RightTrim,
+};
+
+pub ColumnConstraintBody: ColumnConstraintType = {
+    "PRIMARY KEY" <s:SortOrder?> <c:ConflictClause?> <a:AutoIncrement?> => ColumnConstraintType::PrimaryKey(PrimaryKeyConstraint { ascending: s, conflict: c, auto_increment: a.is_some() }),
+    "NOT NULL" <c:ConflictClause?> => ColumnConstraintType::NotNull(c),
+    "UNIQUE" <c:ConflictClause?> => ColumnConstraintType::Unique(c),
+    //todo: "CHECK"
+    //todo: "DEFAULT"
+    "COLLATE" <c:CollateFunction> => ColumnConstraintType::Collate(c),
+    //todo: foreign key clause
 };
 
 pub ColumnConstraint: ColumnConstraint<'input> = {
-    <name:("CONSTRAINT" <r"[a-zA-Z]+">)?> ColumnConstraintBody => ColumnConstraint { name: name }
+    <name:("CONSTRAINT" <r"[a-zA-Z]+">)?> <b:ColumnConstraintBody> => ColumnConstraint { name: name, constraint: b }
 };
 
 pub ColumnDefinition: ColumnDefinition<'input> = {
