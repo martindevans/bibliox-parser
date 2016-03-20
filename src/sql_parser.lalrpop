@@ -11,14 +11,15 @@ use ast::{
     ColumnConstraintType,
     ConflictClause,
     PrimaryKeyConstraint,
-    CollateFunction
+    CollateFunction,
+	ForeignKeyClause
 };
 
 grammar;
 
 //Basics
 SignedInteger: i32 = {
-    r"-?[0-9]+" => i32::from_str(<>).unwrap()
+    r"(-|+)?[0-9]+" => i32::from_str(<>).unwrap()
 };
 
 // Core parts
@@ -60,7 +61,12 @@ pub ColumnConstraintBody: ColumnConstraintType = {
     //todo: "CHECK"
     //todo: "DEFAULT"
     "COLLATE" <c:CollateFunction> => ColumnConstraintType::Collate(c),
-    //todo: foreign key clause
+	<f:ForeignKeyClause> => ColumnConstraintType::Foreign(f),
+};
+
+pub ForeignKeyClause: ForeignKeyClause = {
+	//todo: rest of foreign key clause
+	"REFERENCES" <t:TableName> => ForeignKeyClause { table: t }
 };
 
 pub ColumnConstraint: ColumnConstraint<'input> = {

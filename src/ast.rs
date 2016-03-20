@@ -8,7 +8,7 @@ pub struct TableName<'a> {
 #[derive(PartialEq, Eq, Debug)]
 pub struct ColumnConstraint<'a> {
     pub name: Option<&'a str>,
-    pub constraint: ColumnConstraintType
+    pub constraint: ColumnConstraintType<'a>
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -18,16 +18,35 @@ pub struct PrimaryKeyConstraint {
     pub auto_increment: bool
 }
 
+#[derive(PartialEq, Eq, Debug)]
+pub enum DeferMode {
+	Deferred,
+	Immediate
+}
+
+#[derive(PartialEq, Eq, Debug)]
+pub struct ForeignKeyDeferrable {
+	pub deferrable: bool,
+	pub initial: Option<DeferMode>
+}
+
+#[derive(PartialEq, Eq, Debug)]
+pub struct ForeignKeyClause<'a> {
+	pub table: TableName<'a>,
+	pub columns: Vec<TableName<'a>>
+	pub deferrable: Option<ForeignKeyDeferrable>
+}
+
 //https://www.sqlite.org/syntax/column-constraint.html
 #[derive(PartialEq, Eq, Debug)]
-pub enum ColumnConstraintType {
+pub enum ColumnConstraintType<'a> {
     PrimaryKey(PrimaryKeyConstraint),
     NotNull(Option<ConflictClause>),
     Unique(Option<ConflictClause>),
     //Check,
     //Default,
     Collate(CollateFunction),
-    //Foreign
+    Foreign(ForeignKeyClause<'a>)
 }
 
 #[derive(PartialEq, Eq, Debug)]
