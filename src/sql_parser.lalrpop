@@ -12,14 +12,29 @@ use ast::{
     ConflictClause,
     PrimaryKeyConstraint,
     CollateFunction,
-	ForeignKeyClause
+	ForeignKeyClause,
+    ForeignKeyDeferrable,
+    DeferMode
 };
 
 grammar;
 
+//Macros
+//Parse a comma separated list with an optional trailing comma
+Comma<T>: Vec<T> = {
+    <v:(<T> ",")*> <e:T?> => match e {
+        None => v,
+        Some(e) => {
+            let mut v = v;
+            v.push(e);
+            v
+        }
+    }
+};
+
 //Basics
 SignedInteger: i32 = {
-    r"(-|+)?[0-9]+" => i32::from_str(<>).unwrap()
+    r"(-|\+)?[0-9]+" => i32::from_str(<>).unwrap()
 };
 
 // Core parts
@@ -54,7 +69,7 @@ pub CollateFunction: CollateFunction = {
     "RTRIM" => CollateFunction::RightTrim,
 };
 
-pub ColumnConstraintBody: ColumnConstraintType = {
+pub ColumnConstraintBody: ColumnConstraintType<'input> = {
     "PRIMARY KEY" <s:SortOrder?> <c:ConflictClause?> <a:AutoIncrement?> => ColumnConstraintType::PrimaryKey(PrimaryKeyConstraint { ascending: s, conflict: c, auto_increment: a.is_some() }),
     "NOT NULL" <c:ConflictClause?> => ColumnConstraintType::NotNull(c),
     "UNIQUE" <c:ConflictClause?> => ColumnConstraintType::Unique(c),
@@ -64,9 +79,20 @@ pub ColumnConstraintBody: ColumnConstraintType = {
 	<f:ForeignKeyClause> => ColumnConstraintType::Foreign(f),
 };
 
-pub ForeignKeyClause: ForeignKeyClause = {
-	//todo: rest of foreign key clause
-	"REFERENCES" <t:TableName> => ForeignKeyClause { table: t }
+pub Not: () = {
+    "NOT" => (),
+};
+
+pub DeferrableClause: ForeignKeyDeferrable = {
+    <n:Not?> "DEFERRABLE INITIALLY DEFERRED" => ForeignKeyDeferrable { deferrable: n.is_none(), initial: Some(DeferMode::Deferred) },
+    <n:Not?> "DEFERRABLE INITIALLY IMMEDIATE" => ForeignKeyDeferrable { deferrable: n.is_none(), initial: Some(DeferMode::Immediate) },
+    <n:Not?> "DEFERRABLE" => ForeignKeyDeferrable { deferrable: n.is_none(), initial: None },
+};
+
+pub ForeignKeyClause: ForeignKeyClause<'input> = {
+	"REFERENCES" <t:TableName> <c:("(" <Comma<ColumnName>> ")")?>
+    <d:DeferrableClause?>
+    => ForeignKeyClause { table: t, columns: c, deferrable: d }
 };
 
 pub ColumnConstraint: ColumnConstraint<'input> = {

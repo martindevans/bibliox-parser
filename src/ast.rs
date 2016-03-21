@@ -15,13 +15,29 @@ pub struct ColumnConstraint<'a> {
 pub struct PrimaryKeyConstraint {
     pub ascending: Option<bool>,
     pub conflict: Option<ConflictClause>,
-    pub auto_increment: bool
+    pub auto_increment: bool,
+}
+
+#[derive(PartialEq, Eq, Debug)]
+pub enum MatchMode {
+    Full,
+    Partial,
+    Simple
 }
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum DeferMode {
 	Deferred,
 	Immediate
+}
+
+#[derive(PartialEq, Eq, Debug)]
+pub enum ForeignKeyAction {
+	SetNull,
+	SetDefault,
+    Cascade,
+    Restrict,
+    NoAction
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -33,8 +49,11 @@ pub struct ForeignKeyDeferrable {
 #[derive(PartialEq, Eq, Debug)]
 pub struct ForeignKeyClause<'a> {
 	pub table: TableName<'a>,
-	pub columns: Vec<TableName<'a>>
-	pub deferrable: Option<ForeignKeyDeferrable>
+	pub columns: Option<Vec<&'a str>>,
+	pub deferrable: Option<ForeignKeyDeferrable>,
+    //pub match_modes: Vec<MatchMode>,
+    //pub update_actions: Vec<ForeignKeyAction>,
+    //pub delete_actions: Vec<ForeignKeyAction>
 }
 
 //https://www.sqlite.org/syntax/column-constraint.html
