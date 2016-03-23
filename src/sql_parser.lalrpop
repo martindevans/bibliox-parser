@@ -14,7 +14,8 @@ use ast::{
     CollateFunction,
 	ForeignKeyClause,
     ForeignKeyDeferrable,
-    DeferMode
+    DeferMode,
+    TransactionMode
 };
 
 grammar;
@@ -39,10 +40,18 @@ SignedInteger: i32 = {
 
 // Core parts
 pub TableName: TableName<'input> = {
-    <schema:(<r"[a-zA-Z]+"> ".")?> <name:r"[a-zA-Z]+"> => TableName { schema_name: schema, name: name }
+    <schema:(<SchemaName> ".")?> <name:r"[a-zA-Z]+"> => TableName { schema_name: schema, name: name }
 };
 
 pub ColumnName: &'input str = {
+    <name:r"[a-zA-Z]+"> => name
+};
+
+pub SavepointName: &'input str = {
+    <name:r"[a-zA-Z]+"> => name
+};
+
+pub SchemaName: &'input str = {
     <name:r"[a-zA-Z]+"> => name
 };
 
@@ -113,6 +122,35 @@ pub Type: Type<'input> = {
     <name:TypeName> "(" <n1:SignedInteger> "," <n2:SignedInteger> ")" => Type { name: name, num1: Some(n1), num2: Some(n2) },
 };
 
+pub SavePointBody: StatementBody<'input>  = {
+    "SAVEPOINT" <s:SavepointName> => StatementBody::Savepoint(s)
+};
+
+pub ReleaseBody: StatementBody<'input>  = {
+    "RELEASE" "SAVEPOINT"? <s:SavepointName> => StatementBody::Release(s)
+};
+
+pub RollbackBody: StatementBody<'input>  = {
+    "ROLLBACK" "TRANSACTION"? => StatementBody::Rollback(None),
+    "ROLLBACK" "TRANSACTION"? "TO" "SAVEPOINT"? <s:SavepointName> => StatementBody::Rollback(Some(s))
+};
+
+pub CommitBody: StatementBody<'input>  = {
+    "COMMIT" "TRANSACTION"? => StatementBody::Commit,
+    "END" "TRANSACTION"? => StatementBody::Commit
+};
+
+pub BeginBody: StatementBody<'input>  = {
+    "BEGIN" "TRANSACTION"? => StatementBody::Begin(None),
+    "BEGIN" "DEFERRED" "TRANSACTION"? => StatementBody::Begin(Some(TransactionMode::Deferred)),
+    "BEGIN" "IMMEDIATE" "TRANSACTION"? => StatementBody::Begin(Some(TransactionMode::Immediate)),
+    "BEGIN" "EXCLUSIVE" "TRANSACTION"? => StatementBody::Begin(Some(TransactionMode::Exclusive)),
+};
+
+pub DetachBody: StatementBody<'input>  = {
+    "DETACH" "DATABASE"? <s:SchemaName> => StatementBody::Detach(s)
+};
+
 // Root of parsing!
 // https://www.sqlite.org/syntax/sql-stmt.html
 pub Statement: Statement<'input> = {
@@ -122,7 +160,14 @@ pub Statement: Statement<'input> = {
 };
 
 pub StatementBody: StatementBody<'input> = {
-    <a:AlterTableStatementBody> => a
+    <a:AlterTableStatementBody> => a,
+    "VACUUM" => StatementBody::Vacuum,
+    <s:SavePointBody> => s,
+    <r:ReleaseBody> => r,
+    <r:RollbackBody> => r,
+    <c:CommitBody> => c,
+    <b:BeginBody> => b,
+    <d:DetachBody> => d
 };
 
 pub AlterTableStatementBody: StatementBody<'input> = {

@@ -26,6 +26,13 @@ pub enum MatchMode {
 }
 
 #[derive(PartialEq, Eq, Debug)]
+pub enum TransactionMode {
+	Deferred,
+	Immediate,
+    Exclusive
+}
+
+#[derive(PartialEq, Eq, Debug)]
 pub enum DeferMode {
 	Deferred,
 	Immediate
@@ -115,29 +122,29 @@ pub enum StatementBody<'a> {
     AlterTableAddColumn(TableName<'a>, ColumnDefinition<'a>),
 
     /* Analyze(i32),
-    Attach(i32),
-    Begin(i32),
-    Commit(i32),
-    CreateIndex(i32),
+    Attach(i32),*/
+    Begin(Option<TransactionMode>),
+    Commit,
+    /*CreateIndex(i32),
     CreateTable(i32),
     CreateTrigger(i32),
     CreateView(i32),
     CreateVirtualTable(i32),
     Delete(i32),
-    DeleteLimited(i32),
-    Detach(i32),
-    DropIndex(i32),
+    DeleteLimited(i32),*/
+    Detach(&'a str),
+    /*DropIndex(i32),
     DropTable(i32),
     DropTrigger(i32),
     DropView(i32),
     Insert(i32),
     Pragma(i32),
-    Reindex(i32),
-    Release(i32),
-    Rollback(i32),
-    Savepoint(i32),
-    Select(i32),
+    Reindex(i32),*/
+    Release(&'a str),
+    Rollback(Option<&'a str>),
+    Savepoint(&'a str),
+    /*Select(i32),
     Update(i32),
-    UpdateLimited(i32),
-    Vacuum(i32), */
+    UpdateLimited(i32), */
+    Vacuum,
 }

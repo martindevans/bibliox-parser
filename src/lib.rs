@@ -17,7 +17,8 @@ mod tests {
         ColumnConstraintType,
         ColumnConstraint,
         ConflictClause,
-        CollateFunction
+        CollateFunction,
+        TransactionMode
     };
 
     //Helpers
@@ -109,7 +110,7 @@ mod tests {
     }
 
     #[test]
-    fn alter_table_rename() {
+    fn parse_alter_table_rename() {
         sql_statement_to_ast("ALTER TABLE schema.table RENAME TO foo",
             Statement::Plain(
                 StatementBody::AlterTableRenameTo(
@@ -127,7 +128,7 @@ mod tests {
     }
 
     #[test]
-    fn alter_table_add_column() {
+    fn parse_alter_table_add_column() {
         sql_statement_to_ast("ALTER TABLE table ADD COLUMN column",
             Statement::Plain(
                 StatementBody::AlterTableAddColumn(
@@ -146,7 +147,7 @@ mod tests {
     }
 
     #[test]
-    fn explain_alter_table_add_column() {
+    fn parse_explain_alter_table_add_column() {
         sql_statement_to_ast("EXPLAIN ALTER TABLE table ADD COLUMN column",
             Statement::Explain(
                 StatementBody::AlterTableAddColumn(
@@ -319,5 +320,149 @@ mod tests {
                 constraint: ColumnConstraintType::Collate(CollateFunction::RightTrim)
             }
         });
+    }
+
+    #[test]
+    fn parse_vacuum() {
+        sql_statement_to_ast("VACUUM",
+            Statement::Plain(
+                StatementBody::Vacuum
+            )
+        );
+    }
+
+    #[test]
+    fn parse_savepoint() {
+        sql_statement_to_ast("SAVEPOINT name",
+            Statement::Plain(
+                StatementBody::Savepoint("name")
+            )
+        );
+    }
+
+    #[test]
+    fn parse_release() {
+        sql_statement_to_ast("RELEASE name",
+            Statement::Plain(
+                StatementBody::Release("name")
+            )
+        );
+    }
+
+    #[test]
+    fn parse_release_savepoint() {
+        sql_statement_to_ast("RELEASE SAVEPOINT name",
+            Statement::Plain(
+                StatementBody::Release("name")
+            )
+        );
+    }
+
+    #[test]
+    fn parse_rollback() {
+        sql_statement_to_ast("ROLLBACK",
+            Statement::Plain(
+                StatementBody::Rollback(None)
+            )
+        );
+    }
+
+    #[test]
+    fn parse_rollback_transaction() {
+        sql_statement_to_ast("ROLLBACK TRANSACTION",
+            Statement::Plain(
+                StatementBody::Rollback(None)
+            )
+        );
+    }
+
+    #[test]
+    fn parse_rollback_transaction_to_name() {
+        sql_statement_to_ast("ROLLBACK TRANSACTION TO name",
+            Statement::Plain(
+                StatementBody::Rollback(Some("name"))
+            )
+        );
+    }
+
+    #[test]
+    fn parse_rollback_transaction_to_savepoint_name() {
+        sql_statement_to_ast("ROLLBACK TO SAVEPOINT name",
+            Statement::Plain(
+                StatementBody::Rollback(Some("name"))
+            )
+        );
+    }
+    
+    #[test]
+    fn parse_commit() {
+        sql_statement_to_ast("COMMIT",
+            Statement::Plain(
+                StatementBody::Commit
+            )
+        );
+    }
+    
+    #[test]
+    fn parse_commit_transaction() {
+        sql_statement_to_ast("COMMIT TRANSACTION",
+            Statement::Plain(
+                StatementBody::Commit
+            )
+        );
+    }
+    
+    #[test]
+    fn parse_end_transaction() {
+        sql_statement_to_ast("END TRANSACTION",
+            Statement::Plain(
+                StatementBody::Commit
+            )
+        );
+    }
+    
+    #[test]
+    fn parse_begin() {
+        sql_statement_to_ast("BEGIN",
+            Statement::Plain(
+                StatementBody::Begin(None)
+            )
+        );
+    }
+    
+    #[test]
+    fn parse_begin_deferred() {
+        sql_statement_to_ast("BEGIN DEFERRED",
+            Statement::Plain(
+                StatementBody::Begin(Some(TransactionMode::Deferred))
+            )
+        );
+    }
+    
+    #[test]
+    fn parse_begin_exclusive_transaction() {
+        sql_statement_to_ast("BEGIN EXCLUSIVE TRANSACTION",
+            Statement::Plain(
+                StatementBody::Begin(Some(TransactionMode::Exclusive))
+            )
+        );
+    }
+    
+    #[test]
+    fn parse_detach_name() {
+        sql_statement_to_ast("DETACH name",
+            Statement::Plain(
+                StatementBody::Detach("name")
+            )
+        );
+    }
+    
+    #[test]
+    fn parse_detach_database_name() {
+        sql_statement_to_ast("DETACH DATABASE name",
+            Statement::Plain(
+                StatementBody::Detach("name")
+            )
+        );
     }
 }
